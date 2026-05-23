@@ -1,2 +1,6 @@
 game_events.jsonl
+game_state.jsonl
+highscore.txt
+.env
 .venv
+__pycache__
