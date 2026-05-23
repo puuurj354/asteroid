@@ -31,9 +31,12 @@ class Player(CircleShape):
         self.velocity = pygame.Vector2(0, 0)
         self.bombs = PLAYER_START_BOMBS
         # Tambahan state untuk powerup
-        self.shield_active = False
+        self.shield_active    = False
         self.triple_shot_timer = 0.0
-        self.rapid_fire_timer = 0.0
+        self.rapid_fire_timer  = 0.0
+        self.homing_timer      = 0.0    # durasi homing shot aktif
+        self.speed_timer       = 0.0    # durasi speed boost aktif
+        self.homing_groups     = None   # tuple of sprite.Group; diset oleh main.py
 
     def trigger_bomb(self) -> bool:
         """
@@ -140,19 +143,21 @@ class Player(CircleShape):
             cooldown = 0.09  # Laju tembakan super cepat!
 
         self.shoot_cooldown = cooldown
+        # Tentukan apakah shot ini homing
+        homing = self.homing_groups if self.homing_timer > 0 else None
 
         try:
             # Efek Triple Shot menembakkan 3 peluru sekaligus dalam sudut menyebar
             if self.triple_shot_timer > 0:
                 angles = [-15.0, 0.0, 15.0]
                 for angle in angles:
-                    shot = Shot(self.position.x, self.position.y, color=COLOR_SHOT)
+                    shot = Shot(self.position.x, self.position.y, color=COLOR_SHOT, homing_groups=homing)
                     shot_vector = pygame.Vector2(0, 1)
                     rotated_shot_vector = shot_vector.rotate(self.rotation + angle)
                     shot.velocity = rotated_shot_vector * PLAYER_SHOOT_SPEED
             else:
                 # Tembakan biasa
-                shot = Shot(self.position.x, self.position.y, color=COLOR_SHOT)
+                shot = Shot(self.position.x, self.position.y, color=COLOR_SHOT, homing_groups=homing)
                 shot_vector = pygame.Vector2(0, 1)
                 rotated_shot_vector = shot_vector.rotate(self.rotation)
                 shot.velocity = rotated_shot_vector * PLAYER_SHOOT_SPEED
@@ -169,6 +174,13 @@ class Player(CircleShape):
             self.triple_shot_timer -= dt
         if self.rapid_fire_timer > 0:
             self.rapid_fire_timer -= dt
+        if self.homing_timer > 0:
+            self.homing_timer -= dt
+            if self.homing_timer <= 0:
+                self.homing_timer   = 0.0
+                self.homing_groups  = None
+        if self.speed_timer > 0:
+            self.speed_timer -= dt
 
         keys = pygame.key.get_pressed()
 
@@ -190,10 +202,11 @@ class Player(CircleShape):
             except Exception:
                 pass
 
-        # Batasi kecepatan maksimum kapal
+        # Batasi kecepatan maksimum kapal (lebih tinggi saat speed boost aktif)
         try:
-            if self.velocity.length() > PLAYER_MAX_SPEED:
-                self.velocity = self.velocity.normalize() * PLAYER_MAX_SPEED
+            effective_max = PLAYER_MAX_SPEED * 1.65 if self.speed_timer > 0 else PLAYER_MAX_SPEED
+            if self.velocity.length() > effective_max:
+                self.velocity = self.velocity.normalize() * effective_max
         except Exception:
             pass
 

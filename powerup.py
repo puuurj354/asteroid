@@ -19,7 +19,7 @@ class Powerup(CircleShape):
             val_x = float(x)
             val_y = float(y)
             val_kind = str(kind).strip().lower()
-            if val_kind not in ["shield", "triple", "rapid"]:
+            if val_kind not in ["shield", "triple", "rapid", "bomb", "homing", "speed"]:
                 raise ValueError(f"Unknown powerup kind: {val_kind}")
         except (TypeError, ValueError) as e:
             # Fallback ke nilai aman jika input tidak valid
@@ -29,19 +29,32 @@ class Powerup(CircleShape):
             print(f"Warning: Powerup initialization error: {e}. Falling back to default values.")
 
         super().__init__(val_x, val_y, 15)
-        self.kind = val_kind
+        self.kind     = val_kind
         self.rotation = 0.0
+        # Lifetime: powerup hilang setelah 10 detik
+        self.lifetime    = 10.0
+        self._blink_acc  = 0.0   # akumulator blink
+        self._visible    = True  # status visibility blink
 
         # Tentukan skema warna dan inisial teks berdasarkan jenis power-up
         if self.kind == "shield":
-            self.color = (0, 240, 255)      # Cyan
+            self.color  = (0, 240, 255)      # Cyan
             self.letter = "S"
         elif self.kind == "triple":
-            self.color = (255, 220, 0)      # Kuning
+            self.color  = (255, 220, 0)      # Kuning
             self.letter = "T"
-        else: # "rapid"
-            self.color = (50, 255, 100)     # Hijau
+        elif self.kind == "rapid":
+            self.color  = (50, 255, 100)     # Hijau
             self.letter = "R"
+        elif self.kind == "bomb":
+            self.color  = (200, 255, 255)    # Cyan pucat
+            self.letter = "B"
+        elif self.kind == "homing":
+            self.color  = (255, 90, 60)      # Oranye merah
+            self.letter = "H"
+        else:  # "speed"
+            self.color  = (0, 210, 255)      # Biru cyan
+            self.letter = "V"
 
         # Hanyut dengan kecepatan lambat ke arah acak
         angle = random.uniform(0, 360)
@@ -53,8 +66,11 @@ class Powerup(CircleShape):
     def draw(self, screen: pygame.Surface):
         """
         Menggambar bentuk heksagon neon berputar secara defensif dengan teks inisial di tengah.
+        Skip saat sedang fase tak-terlihat (blink effect).
         """
         if not isinstance(screen, pygame.Surface):
+            return
+        if not self._visible:
             return
 
         try:
@@ -82,7 +98,8 @@ class Powerup(CircleShape):
 
     def update(self, dt: float):
         """
-        Perbarui posisi dan rotasi powerup secara defensif.
+        Perbarui posisi, rotasi, dan lifetime powerup secara defensif.
+        Powerup mulai berkedip saat sisa lifetime < 3 detik, lalu hilang.
         """
         try:
             val_dt = float(dt)
@@ -94,6 +111,21 @@ class Powerup(CircleShape):
             self.rotation += 90.0 * val_dt  # Putar 90 derajat per detik
         except Exception as e:
             print(f"Error updating powerup position: {e}")
+
+        # Kurangi lifetime
+        self.lifetime -= val_dt
+        if self.lifetime <= 0:
+            self.kill()
+            return
+
+        # Blink saat lifetime < 3 detik
+        if self.lifetime < 3.0:
+            self._blink_acc += val_dt
+            if self._blink_acc >= 0.15:
+                self._blink_acc = 0.0
+                self._visible   = not self._visible
+        else:
+            self._visible = True
 
         # Screen wrapping agar powerup tidak keluar layar
         margin = self.radius

@@ -54,5 +54,8 @@ UFO_SPAWN_MAX_SECONDS = 25.0
 PLAYER_START_BOMBS = 2
 COLOR_BOMB = (200, 255, 255)
 
-
-
+# Sistem Combo & Multiplier
+COMBO_TIMEOUT = 3.0
+# Format: (min_kills_in_combo, multiplier)
+# Diperiksa dari atas ke bawah — threshold tertinggi dulu
+COMBO_THRESHOLDS = [(7, 8), (4, 4), (2, 2), (0, 1)]
